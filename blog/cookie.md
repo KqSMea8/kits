@@ -1,38 +1,56 @@
 cookie
 =======
 
-[RFC:set-cookie](https://tools.ietf.org/html/rfc6265#section-4.1)
-[RFC:cookie](https://tools.ietf.org/html/rfc6265#section-4.2)
+> RFC规范：[HTTP State Management Mechanism](https://tools.ietf.org/html/rfc6265)
 
-存储cookie是浏览器提供的功能，cookie其实是存储在浏览器中的纯文本，
-浏览器的安装目录下会专门有一个 cookie 文件夹来存放各个域下设置的cookie，
-cookie标准还是做了一些限制的：每个域名下的cookie 的大小最大为**4KB**，
-每个域名下的cookie数量最多为**20**个（但很多浏览器厂商在具体实现时支持大于20个）。
+> Wiki: [HTTP_cookie](https://en.wikipedia.org/wiki/HTTP_cookie)
 
-当服务器要做出响应时，可以通过添加response header中的 `set-cookie` 字段，
-将客户端需要的cookie携带过去。
-当网页要发http请求时，浏览器会先检查是否有相应的cookie，
-有则自动添加在request header中的 `cookie` 字段中。
-这是浏览器自动帮我们做的，而且每一次http请求浏览器都会自动帮我们做。
-这个特点很重要，因为这关系到“什么样的数据适合存储在cookie中”。
+cookie是一段可以由网站服务端发送，并在浏览器本地存储的，
+用于记录用户行为状态（如购物车，浏览记录）或用户身份（是否登录）等信息的数据。
 
-如果这些数据并不是每个请求都需要发给服务端，那么浏览器的自动处理无疑增加了网络开销；
-但如果这些数据是每个请求都需要发给服务端（比如身份认证信息），
-那么自动携带的特性就大大免去了重复手动添加的操作。
-所以对于那些“每次请求都要携带的信息”就特别适合放在cookie中，其他类型的数据就不适合了。
+当服务器向客户端做出响应时，通过添加response header中的 `set-cookie` 字段，
+将cookie信息携带给客户端，这个过程是需要手动添加实现的。
 
-cookie即可以在浏览器端设置和使用，也可以在服务端设置和使用，但两者略有差异，
-由于cookie的读取和写入方法与使用语言的相关，浏览器端只使用js语言，直接介绍js方法即可，
-服务端语言就比较多了，因此这里只介绍部分语言的使用，主要还是介绍cookie特性。
+`set-cookie`字段可以在任何一个response中被设置，
+客户端可以在response的状态码等于1XX的时候忽略这个字段，
+但等于其他状态码（包括4XX，5XX）的时候则不能忽略。
 
-下面分别来介绍。
+当客户端发http请求到服务端时，浏览器会检查是否有已存储的cookie，
+有则自动添加在request header中的 `cookie` 字段中，发送到服务端，
+这个过程是自动实现的，而且是每次请求均会如此执行。
+
+因此，根据浏览器自动携带cookie这一个特性，
+可以发现并不是所有的数据都适合长久的存放于cookie中，
+只有那些“每次请求都需要与服务器沟通的信息”才需要长久的保存在cookie中，
+否则就会造成网络带宽的浪费。
+
+在规范中cookie的存储是有限制的，但各个浏览器厂商实现也略存在差异，
+具体情况需要实际测试。规范中的限制包括：
+
++ 每条cookie至少可以存储4096字节(byte)，包括cookie的name, value, attribute数据长度的总和，
+  【虽然规范指定**至少**，但浏览器厂商实现各异，保险起见，在使用时最好小于4095字节】
+
++ 每个域下至少存储50条cookie
+
++ 浏览器一共至少可以3000条cookie
+
+规范中还指出服务端应尽量减小cookie的大小，以压缩带宽，
+并保证每次请求都能携带上cookie的信息，因此，虽然规范使用的是 **至少**来限定，
+但在实际的开发中，应当按**至多**来使用，除非已经在特定的浏览器中实际测试成功。
+
+cookie在浏览器端与在服务端的读写略有差异，服务端能控制的功能大于客户端。
+由于cookie的读写与语言相关，浏览器端只使用js语言，直接介绍js方法即可，
+服务端语言比较多，因此以下只介绍cookie特性，不做具体语言的实现。
+
 
 # 客户端(浏览器)中使用cookie
 
 ## 读取cookie
 
-  可直接调用 `document.cookie` 取值。例如在github网站的console中运行,
-  会打印出客户端可访问的所有的cookie键值对（有些cookie客户端是无法直接访问的，与服务端的差异）
+  可直接调用 `document.cookie` 取值。例如：
+
+  在github网站的console中运行以下代码，会打印出客户端可访问的所有的cookie键值对。
+  （当设置`httponly`客户端是无法访问的）
 
   ```javascript
     console.log(document.cookie)
@@ -42,38 +60,78 @@ cookie即可以在浏览器端设置和使用，也可以在服务端设置和�
 ## 设置cookie
 
   可直接调用 `document.cookie = 'cookie_value'`,
-  **注意：**用这个方法一次只能对一个cookie的键进行设置或更新。
-  当cookie中无此key时，写入一个此key的cookie值，
-  当cookie中已经包含此key的值，则执行更新操作，即覆盖原有的值。
+  （**注意：**用这个方法一次只能对一个cookie的键进行设置或更新）
 
-  例如：
+  当cookie中无此key时，则写入一个此key的cookie值
+
+  当cookie中已经包含此key，则执行更新操作，即覆盖原有的值
+
+  JS表达式：
 
   ```javascript
     document.cookie = `${key}=${value};max-age=${max-age-in-seconds};expires=${date-in-GMTString-format};domain=${domain};path=${path};secure;`
   ```
 
-  `cookie_value`是一个键值对形式的字符串。包括以下几个字段，
-  字段与字段间使用`;`（分号）隔开，并且字段名大小写不敏感。
-  部分文档中有使用空格和分号做分隔符的说法，实际上经现代浏览器测试空格并不是必须的，
-  而且每个键值对key与value首尾的空格均会被过滤掉。因此不使用空格或使用多个空格效果是一样的。
+  `cookie_value`是包含一个{key:value}键值对和多个attribute(键值对或键)的字符串。
+  其中attribute包括：`exoires`, `max-age`, `domain`, `path`, `secure`, `httponly`
 
-  + ${key} = ${value}【必填】： `key`是cookie的名字， `value`可以是任意字符，
-    包括cookie的保留字段名（如`exoires`、`domain`）、空格、等号。
+  `cookie_value` 有以下特性：
 
-    实际开发中要避免使用cookie的保留字段，以免造成混乱，
-    当cookie的value中出现保留字段，可用来判定可能是存储时丢失分隔符造成的。
-    对于空格、等号可使用`encodeURIComponent`进行编码，读取时再使用`decodeURIComponent`解码。
+  + `键值对`或`键`之间使用`;`(分号)做分隔符
+  + `键名` 大小写不敏感。
+  + `key`与`value`之间使用`=`(等号)做分割符，以第一个出现的为准，
+    后续出现的`=`视为`value`的值部分，如果整条cookie中未出现`=`，
+    则认为此条cookie不合法，会被忽略
+  + `键名`与`值` 首尾的空格均会被自动trim，中间出现的空格会全部保留
+  + `value`(非attribute的value)可以是任意字符，包括attribute的名字，等号等保留关键字，
+    但分号不可以，因为分号被认为是`键值对`或`键`的结束。
 
-  + expires【选填】：过期时间，**注意：** 必须是UTC时间，
-    可使用`new Date(timestamp).toUTCString()`或`new Date(timestmap).toGMTString()`方法来获得
+  > 部分文档中有使用空格和分号做分隔符的说法，实际上空格并不是必须的，
+  > 因为key与value首尾的空格均会被过滤掉，
+  > 因此不使用空格或使用多个空格效果是一样的。
 
-    如果设置 `expires=Sun, 07 Jan 2018 08:21:24 GMT` 则在UTC时刻2018年1月7日08:21:24之后失效，
-    cookie失效后会从浏览器中删除，([UTC与GMT区别](https://www.zhihu.com/question/27052407))
+  + ${key}=${value}【必填】：
 
-    如果未设置，则过期时间为session结束的时间，即关闭浏览器的时间。
-    但并不是关闭正在访问网页就销毁cookie，因为现代浏览器大多提供标签(tab card)功能，
+    `key`: cookie的名字，不能是空字符串
+
+    `=`: 分割符
+
+    `value`: cookie的值，可以是任意字符
+
+    注意：
+
+    + `key` 为空或是一串空格（首尾空格会trim掉等于空），此条cookie会被忽略
+    + `value`可以是任意字符，但使用保留字段是不推荐的。
+
+    实际开发中要避免使用cookie的保留字段作为value，以免造成混乱，
+    当cookie的`value`中出现保留字段，可用来判定可能是存储时丢失分隔符造成的。
+
+    对于一定要使用空格、等号等特殊字符的场景，要对`key`和`value`的值进行escape。
+    （例如：存储时使用`encodeURIComponent`进行编码，
+    读取时再使用`decodeURIComponent`进行解码）
+
+
+  + expires【选填】：过期时间
+
+    注意:
+
+    + 必须是UTC时间格式，可使用`date.toUTCString()`或`date.toGMTString()`方法来获得,
+      如果使用了非UTC格式的值，则认为此条cookie非法，会被忽略。
+    + 如果设置时间早于或刚好等于当前时间，则认为立即过期，此cookie会被删除
+    + 如果位置此字段，则过期时间为session结束的时间，即关闭浏览器的时间
+
+    tips:
+
+    关闭正在访问网页并不代表session结束，因为现代浏览器大多提供标签(tab card)功能，
     关闭网页只是关闭一个标签，但session信息会在所有标签中共享，
     所以只有关闭了浏览器，session信息才会清除。
+
+    例如：
+
+    `expires=Sun, 07 Jan 2018 08:21:24 GMT` ，
+    则过期时间是UTC时刻2018年1月7日08:21:24，超过这个时刻此条cookie会失效，
+    注意：UTC时刻指的是0时区的UTC时间，也就是GMT时间
+    ([UTC与GMT区别](https://www.zhihu.com/question/27052407))
 
   + max-age【选填】: 过期时间（秒），无默认值，与`expires`具有相同作用，
     但是优先级要大于`expires`，即同时设置了 `expires`和`max-age`以max-age为准。
