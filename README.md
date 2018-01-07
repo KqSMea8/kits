@@ -4,6 +4,7 @@
 ## blog
 
 [开始编写一个Vue组件之前](./blog/writeComponents.md)
+[cookie使用](./blog/cookie.md)
 
 ## tool
 
