@@ -1,0 +1,12 @@
+[color]
+	ui = true
+	status = auto
+    branch = auto
+    editor=vim
+[user]
+	email = wenqing@yunshan.net.cn
+	name = wenqing
+[core]
+	editor = vim
+[alias]
+  lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%ci) %C(bold blue)<%ae>%Creset' --abbrev-commit

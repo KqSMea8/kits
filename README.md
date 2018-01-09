@@ -9,5 +9,8 @@
 
 ## tool
 
-[vim个人配置](./vim/)
+[vim配置](./tool/.vimrc)
 
+[git配置](./tool/.gitconfig)
+
+[git hook](./tool/hooks)
