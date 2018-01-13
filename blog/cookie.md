@@ -53,9 +53,11 @@ cookie字符串有以下特性：
   包括attribute的名字，等号等保留关键字，甚至空字符串也是可以的。
   但分号不可以，因为分号被认为是`键值对`或`键`的结束。
 
-> 部分文档中有使用空格和分号做分隔符的说法，实际上空格并不是必须的，
-> 因为key与value首尾的空格均会被过滤掉，
-> 因此不使用空格或使用多个空格效果是一样的。
+> 部分文档中有使用空格和分号做分隔符的说法，
+> 是因为在使用`document.cookie`读取cookie字符串时，所有的cookie键值对之间存在一个空格和分号。
+> 但这并不意味着使用空格加分号做分隔符，因为当写入cookie时，
+> key与value首尾多余的空格均会被过滤掉，即不使用空格或使用一个空格或多个空格效果是一样的，
+> 在读取时都会变成一个空格和分号，空格并不像是分割符，更像是自动添加的字符。
 
 + ${key}=${value}【必填】：
 
@@ -151,14 +153,14 @@ cookie字符串有以下特性：
 
   使用此字段一般用于避免XSS攻击，
   由于XSS攻击多数通过盗取用户cookie中的身份信息后发起攻击，
-  因此对cookie中的身份信息使用`httponly`，客户端就无法获取，
-  从而降低XSS攻击的可能，但这并不是避免XSS攻击最有效的手段。
+  因此对cookie中的身份信息使用`httponly`，那么客户端就无法使用js读取到此条cookie，
+  从而降低XSS攻击的可能性，但这并不是避免XSS攻击最有效的手段。
 
   注意：
 
   + 此字段只能在服务端设置，客户端无法设置此字段
   + 默认此字段不设置，即客户端可访问
-  + 当设置此字段后，客户端不能访问实际js无法访问，但可以通过其他途径看到，
+  + 当设置此字段后，客户端不能使用js访问，但可以通过其他途径看到和获取，
     如使用开发者工具(chrome-> F12 -> Application -> cookies)
   + 此字段不使用键值对方式表达，设置方式同`secure`
 
@@ -221,7 +223,12 @@ cookie在浏览器端与在服务端的读写略有差异，服务端能控制�
 
   var docCookies = {
     getItem: function (sKey) {
-      return decodeURIComponent(document.cookie.replace(new RegExp("(?:(?:^|.*;)\\s*" + encodeURIComponent(sKey).replace(/[\-\.\+\*]/g, "\\$&") + "\\s*\\=\\s*([^;]*).*$)|^.*$"), "$1")) || null;
+      return decodeURIComponent(document.cookie.replace(
+        new RegExp(
+          "(?:(?:^|.*;)\\s*" +
+          encodeURIComponent(sKey).replace(/[\-\.\+\*]/g, "\\$&") +
+          "\\s*\\=\\s*([^;]*).*$)|^.*$"
+        ), "$1")) || null;
     },
     setItem: function (sKey, sValue, vEnd, sPath, sDomain, bSecure) {
       if (!sKey || /^(?:expires|max\-age|path|domain|secure)$/i.test(sKey)) { return false; }
@@ -239,20 +246,35 @@ cookie在浏览器端与在服务端的读写略有差异，服务端能控制�
             break;
         }
       }
-      document.cookie = encodeURIComponent(sKey) + "=" + encodeURIComponent(sValue) + sExpires + (sDomain ? "; domain=" + sDomain : "") + (sPath ? "; path=" + sPath : "") + (bSecure ? "; secure" : "");
+      document.cookie = encodeURIComponent(sKey) + "=" + encodeURIComponent(sValue)
+        + sExpires
+        + (sDomain ? "; domain=" + sDomain : "")
+        + (sPath ? "; path=" + sPath : "")
+        + (bSecure ? "; secure" : "");
       return true;
     },
     removeItem: function (sKey, sPath, sDomain) {
       if (!sKey || !this.hasItem(sKey)) { return false; }
-      document.cookie = encodeURIComponent(sKey) + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT" + ( sDomain ? "; domain=" + sDomain : "") + ( sPath ? "; path=" + sPath : "");
+      document.cookie = encodeURIComponent(sKey)
+        + "=; expires=Thu, 01 Jan 1970 00:00:00 GMT"
+        + ( sDomain ? "; domain=" + sDomain : "")
+        + ( sPath ? "; path=" + sPath : "");
       return true;
     },
     hasItem: function (sKey) {
-      return (new RegExp("(?:^|;\\s*)" + encodeURIComponent(sKey).replace(/[\-\.\+\*]/g, "\\$&") + "\\s*\\=")).test(document.cookie);
+      return (new RegExp(
+        "(?:^|;\\s*)" +
+        encodeURIComponent(sKey).replace(/[\-\.\+\*]/g, "\\$&") +
+        "\\s*\\="
+      )).test(document.cookie);
     },
     keys: /* optional method: you can safely remove it! */ function () {
-      var aKeys = document.cookie.replace(/((?:^|\s*;)[^\=]+)(?=;|$)|^\s*|\s*(?:\=[^;]*)?(?:\1|$)/g, "").split(/\s*(?:\=[^;]*)?;\s*/);
-      for (var nIdx = 0; nIdx < aKeys.length; nIdx++) { aKeys[nIdx] = decodeURIComponent(aKeys[nIdx]); }
+      var aKeys = document.cookie
+        .replace(/((?:^|\s*;)[^\=]+)(?=;|$)|^\s*|\s*(?:\=[^;]*)?(?:\1|$)/g, "")
+        .split(/\s*(?:\=[^;]*)?;\s*/);
+      for (var nIdx = 0; nIdx < aKeys.length; nIdx++) {
+        aKeys[nIdx] = decodeURIComponent(aKeys[nIdx]);
+      }
       return aKeys;
     }
   };
@@ -325,14 +347,3 @@ cookie在浏览器端与在服务端的读写略有差异，服务端能控制�
 xss攻击通过向网站注入可执行的脚本盗取cookie，
 因此可通过设置httponly避免cookie被js获取，从而降低xss的攻击的可能性，
 但低于xss攻击首先应该是避免网站被注入可执行的脚本，对用户提交的表单使用escape。
-
-+ csrf攻击
-
-避免cookie被盗取多是抵御csrf攻击，由于csrf_token有时会使用cookie存储，
-如果cookie被盗取，那么就有可能形成csrf攻击。
-
-抵御cookie被盗取后的csrf，可使用一下几种方式
-
-  + 动态csrf_token：利用scrf_token短效性，即使获取cookie也会在短期内过期失效
-  + 部分Identifiers：cookie中只是部分token内容，即使获取cookie也无法完成完整的校验
-  + Origin，Referer 请求头校验，即使获取到cookie由于同源策略拒绝可接受域的请求
