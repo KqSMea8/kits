@@ -7,6 +7,12 @@
 
 [cookie使用](./blog/cookie.md)
 
+[跨域](./blog/crossOrign.md)
+
+[原型](./blog/prototype.md)
+
+[storage](./blog/storage.md)
+
 ## tool
 
 [vim配置](./tool/.vimrc)
