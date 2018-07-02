@@ -94,6 +94,7 @@ Plugin 'heavenshell/vim-jsdoc'      "生成jsdoc的
 " Plugin 'godlygeek/tabular'          " markdown 高亮
 " Plugin 'plasticboy/vim-markdown'    " markdown 高亮
 Plugin 'tpope/vim-markdown'
+Plugin 'leafgarland/typescript-vim'
 
 call vundle#end()		"required
 filetype plugin indent on 	"required
