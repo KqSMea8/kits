@@ -1,12 +1,17 @@
-[color]
-	ui = true
-	status = auto
-    branch = auto
-    editor=vim
 [user]
-	email = wenqing@yunshan.net.cn
-	name = wenqing
+	email = coffeebi@tencent.com
+	name = biwenqing
 [core]
-	editor = vim
+  editor = vim
 [alias]
-  lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%ci) %C(bold blue)<%ae>%Creset' --abbrev-commit
+  lg = log --color --graph --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s \
+%Cgreen(%ai) %C(bold blue)<%aE%Creset|%C(bold blue)%aN>%Creset(%ci)' --abbrev-commit
+[color]
+  ui = true
+  status = auto
+  branch = auto
+  editor = vim
+[http "https://git.code.oa.com"]
+      proxy = http://127.0.0.1:12639
+[http "http://git.code.oa.com"]
+      proxy = http://127.0.0.1:12639
